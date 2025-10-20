@@ -25,7 +25,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     // Vérifier l'authentification
     const token = localStorage.getItem('access')
     if (!token) {
-      router.push('/login')
+      // Redirection immédiate sans loading
+      router.replace('/login')
       return
     }
 
@@ -34,19 +35,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     setIsLoading(false)
   }, [pathname, router])
 
-  if (isLoading) {
-    return (
-      <main className="min-h-screen grid place-items-center bg-background">
-        <div className="text-center space-y-6">
-          <h1 className="text-4xl font-semibold">Organisation du travail</h1>
-          <p className="text-muted">Vérification de l'authentification...</p>
-        </div>
-      </main>
-    )
-  }
-
-  if (!isAuthenticated) {
-    return null // Redirection en cours
+  if (isLoading || !isAuthenticated) {
+    return null // Redirection en cours ou chargement
   }
 
   return <>{children}</>
