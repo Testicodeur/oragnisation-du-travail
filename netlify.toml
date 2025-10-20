@@ -1,0 +1,22 @@
+[build]
+  base = "frontend"
+  publish = "frontend/.next"
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NEXT_PUBLIC_API_URL = "https://your-backend-url.herokuapp.com"
+
+# Configuration pour Next.js sur Netlify
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://your-backend-url.herokuapp.com/api/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

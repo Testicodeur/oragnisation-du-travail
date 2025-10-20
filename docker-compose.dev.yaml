@@ -1,0 +1,58 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: orgwork_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: orgwork
+      POSTGRES_USER: orgwork
+      POSTGRES_PASSWORD: orgwork
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: orgwork_backend
+    depends_on:
+      - db
+    environment:
+      DJANGO_SETTINGS_MODULE: backend.settings
+      USE_POSTGRESQL: "1"
+      POSTGRES_DB: orgwork
+      POSTGRES_USER: orgwork
+      POSTGRES_PASSWORD: orgwork
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      DJANGO_SECRET_KEY: devsecretkey-change-me
+      DJANGO_DEBUG: "1"
+      ALLOWED_HOSTS: "*"
+    volumes:
+      - ./backend:/app/backend
+      - ./media:/app/media
+      - ./static:/app/static
+    ports:
+      - "8001:8000"
+    command: sh -c "python -m pip install -r backend/requirements-dev.txt && python backend/manage.py migrate && python backend/manage.py runserver 0.0.0.0:8000"
+
+  frontend:
+    image: node:20-alpine
+    container_name: orgwork_frontend
+    working_dir: /app
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8001
+    volumes:
+      - ./frontend:/app
+    command: sh -lc "npm install && npm run dev"
+    ports:
+      - "3001:3000"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
