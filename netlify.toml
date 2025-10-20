@@ -5,7 +5,7 @@
 
 [build.environment]
   NODE_VERSION = "20"
-  NEXT_PUBLIC_API_URL = "https://your-backend-url.onrender.com"
+  NEXT_PUBLIC_API_URL = "https://oragnisation-du-travail.onrender.com"
 
 # Configuration pour Next.js sur Netlify
 [[plugins]]
@@ -16,7 +16,7 @@
 
 [[redirects]]
   from = "/api/*"
-  to = "https://your-backend-url.onrender.com/api/:splat"
+  to = "https://oragnisation-du-travail.onrender.com/api/:splat"
   status = 200
   force = true
 
