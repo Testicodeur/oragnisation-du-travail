@@ -30,7 +30,7 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
-  const [category, setCategory] = useState("perso")
+  const [category, setCategory] = useState("dev")
   const [editing, setEditing] = useState<Project | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
@@ -59,13 +59,13 @@ export default function ProjectsPage() {
   const createProject = async () => {
     setError(null)
     try {
-      const res = await fetch(api + "/api/projects/", { method: 'POST', headers: headers(), body: JSON.stringify({ name, description, status: 'active', category }) })
+      const res = await fetch(api + "/api/projects/", { method: 'POST', headers: headers(), body: JSON.stringify({ name, description, client: "", status: 'active', category }) })
       if (!res.ok) { 
         const errorData = await res.json().catch(() => ({}))
         setError(`Création projet échouée: ${errorData.detail || res.statusText}`); 
         return 
       }
-      setName(""); setDescription(""); setCategory("perso"); setShowCreateForm(false); load()
+      setName(""); setDescription(""); setCategory("dev"); setShowCreateForm(false); load()
     } catch (err: any) {
       setError(`Erreur réseau: ${err.message}`)
     }
@@ -110,9 +110,10 @@ export default function ProjectsPage() {
 
   const getCategoryIcon = (cat: string) => {
     switch(cat) {
-      case 'perso': return User
-      case 'oodrive': return Briefcase
-      case 'tharios': return Building2
+      case 'dev': return User
+      case 'design': return Briefcase
+      case 'integration': return Building2
+      case 'maintenance': return Building2
       default: return FolderKanban
     }
   }
@@ -162,9 +163,10 @@ export default function ProjectsPage() {
               <Input value={name} onChange={e=>setName(e.target.value)} placeholder="Nom du projet" />
               <Input value={description} onChange={e=>setDescription(e.target.value)} placeholder="Description du projet (optionnel)" />
               <Select value={category} onChange={e=>setCategory(e.target.value)}>
-                <option value="perso">Perso</option>
-                <option value="oodrive">Oodrive</option>
-                <option value="tharios">Tharios</option>
+                <option value="dev">Development</option>
+                <option value="design">Design</option>
+                <option value="integration">Integration</option>
+                <option value="maintenance">Maintenance</option>
               </Select>
             </div>
             <div className="flex gap-2">
@@ -203,9 +205,10 @@ export default function ProjectsPage() {
               </Select>
               <Select value={filterCategory} onChange={e=>setFilterCategory(e.target.value as any)}>
                 <option value="all">Toutes catégories</option>
-                <option value="perso">Perso</option>
-                <option value="oodrive">Oodrive</option>
-                <option value="tharios">Tharios</option>
+                <option value="dev">Development</option>
+                <option value="design">Design</option>
+                <option value="integration">Integration</option>
+                <option value="maintenance">Maintenance</option>
               </Select>
               <Button variant="ghost" onClick={()=>setSortDir(d=>d==='asc'?'desc':'asc')} className="gap-2">
                 <ArrowUpDown className="w-4 h-4" />
@@ -323,9 +326,10 @@ export default function ProjectsPage() {
                   value={editing.category} 
                   onChange={e=>setEditing({ ...editing, category: e.target.value })}
                 >
-                  <option value="perso">Perso</option>
-                  <option value="oodrive">Oodrive</option>
-                  <option value="tharios">Tharios</option>
+                  <option value="dev">Development</option>
+                  <option value="design">Design</option>
+                  <option value="integration">Integration</option>
+                  <option value="maintenance">Maintenance</option>
                 </Select>
                 <Select 
                   value={editing.status} 
