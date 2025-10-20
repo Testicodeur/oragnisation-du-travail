@@ -32,13 +32,14 @@ npm run build
 
 ## Déploiement Backend (Options Gratuites)
 
-### Option 1: Railway (Recommandé)
-- Gratuit jusqu'à 500h/mois
+### Option 1: Render (Recommandé)
+- Gratuit avec limitations (750h/mois)
 - Support SQLite natif
 - Deploy automatique depuis GitHub
+- Configuration via render.yaml
 
-### Option 2: Render
-- Gratuit avec limitations
+### Option 2: Railway
+- Gratuit jusqu'à 500h/mois
 - Support SQLite
 - Deploy automatique
 

@@ -9,9 +9,10 @@ Application de gestion de projets et tâches avec Django + Next.js et SQLite.
 - **Publish directory**: `frontend/.next`
 - **Node version**: 20
 
-### Backend (Railway/Render)
+### Backend (Render)
 - **Build command**: `cd backend && pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate`
 - **Start command**: `cd backend && python manage.py runserver 0.0.0.0:$PORT`
+- **Configuration**: Utilise `render.yaml` pour la configuration automatique
 
 ## 🔧 Développement Local
 
@@ -33,10 +34,10 @@ npm run dev
 ### Netlify (Frontend)
 - `NEXT_PUBLIC_API_URL`: URL de votre backend déployé
 
-### Railway/Render (Backend)
-- `DJANGO_SECRET_KEY`: Clé secrète Django
-- `DJANGO_DEBUG`: `0` pour la production
-- `ALLOWED_HOSTS`: Domaine de votre backend
+### Render (Backend)
+- `DJANGO_SECRET_KEY`: Générée automatiquement par Render
+- `DJANGO_DEBUG`: `0` (configuré automatiquement)
+- `ALLOWED_HOSTS`: `*.onrender.com` (configuré automatiquement)
 
 ## 🎯 Fonctionnalités
 
