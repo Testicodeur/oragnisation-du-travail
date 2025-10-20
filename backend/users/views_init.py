@@ -1,6 +1,7 @@
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.core.management import call_command
 from users.models import User
 import json
 
@@ -18,6 +19,12 @@ def init_admin(request):
         # Clé secrète pour sécuriser cette route
         if secret_key != 'init-admin-2024':
             return JsonResponse({'error': 'Clé secrète incorrecte'}, status=403)
+        
+        # D'abord, exécuter les migrations
+        try:
+            call_command('migrate', verbosity=0, interactive=False)
+        except Exception as migrate_error:
+            return JsonResponse({'error': f'Erreur migration: {str(migrate_error)}'}, status=500)
         
         personal_identifier = 'romain'
         password = 'admin123'
