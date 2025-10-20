@@ -46,6 +46,7 @@ export default function ProjectsPage() {
 
   const headers = () => {
     const access = typeof window !== 'undefined' ? localStorage.getItem("access") : null
+    console.log('Token access:', access ? 'présent' : 'absent')
     return { Authorization: `Bearer ${access}`, "Content-Type": "application/json" }
   }
 
@@ -57,9 +58,17 @@ export default function ProjectsPage() {
 
   const createProject = async () => {
     setError(null)
-    const res = await fetch(api + "/api/projects/", { method: 'POST', headers: headers(), body: JSON.stringify({ name, description, status: 'active', category }) })
-    if (!res.ok) { setError("Création projet échouée"); return }
-    setName(""); setDescription(""); setCategory("perso"); setShowCreateForm(false); load()
+    try {
+      const res = await fetch(api + "/api/projects/", { method: 'POST', headers: headers(), body: JSON.stringify({ name, description, status: 'active', category }) })
+      if (!res.ok) { 
+        const errorData = await res.json().catch(() => ({}))
+        setError(`Création projet échouée: ${errorData.detail || res.statusText}`); 
+        return 
+      }
+      setName(""); setDescription(""); setCategory("perso"); setShowCreateForm(false); load()
+    } catch (err: any) {
+      setError(`Erreur réseau: ${err.message}`)
+    }
   }
 
   const startEdit = (p: Project) => setEditing(p)
