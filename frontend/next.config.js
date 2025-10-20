@@ -1,7 +1,7 @@
 /***** @type {import('next').NextConfig} *****/
 const nextConfig = {
   reactStrictMode: true,
-  // output: 'export', // Désactivé pour permettre les routes dynamiques
+  output: 'export', // Réactivé pour Netlify
   trailingSlash: true,
   typescript: {
     ignoreBuildErrors: true,

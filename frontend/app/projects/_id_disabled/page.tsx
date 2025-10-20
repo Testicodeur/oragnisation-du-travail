@@ -7,6 +7,8 @@ import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
 import Badge from '@/components/ui/Badge'
 
+// Note: Cette page nécessite une route dynamique
+// Pour l'export statique, on pourrait la désactiver temporairement
 
 export default function ProjectDetailPage() {
   const params = useParams() as { id: string }
