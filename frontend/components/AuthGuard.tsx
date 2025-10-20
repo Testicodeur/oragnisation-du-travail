@@ -9,15 +9,20 @@ interface AuthGuardProps {
 export default function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter()
   const pathname = usePathname()
-  const [isLoading, setIsLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+
     // Pages qui ne nécessitent pas d'authentification
     const publicPages = ['/login']
     
     if (publicPages.includes(pathname)) {
-      setIsLoading(false)
       setIsAuthenticated(true)
       return
     }
@@ -32,11 +37,21 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
     // Optionnel: vérifier la validité du token
     setIsAuthenticated(true)
-    setIsLoading(false)
-  }, [pathname, router])
+  }, [pathname, router, mounted])
 
-  if (isLoading || !isAuthenticated) {
-    return null // Redirection en cours ou chargement
+  if (!mounted) {
+    return (
+      <main className="min-h-screen grid place-items-center bg-gradient-to-br from-[#1a1b3a] via-[#2d1b69] to-[#1a1b3a] text-white">
+        <div className="text-center space-y-6">
+          <h1 className="text-4xl font-semibold">Organisation du travail</h1>
+          <p className="text-gray-300">Initialisation...</p>
+        </div>
+      </main>
+    )
+  }
+
+  if (!isAuthenticated && !pathname.includes('/login')) {
+    return null // Redirection en cours
   }
 
   return <>{children}</>
