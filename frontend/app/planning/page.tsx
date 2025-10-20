@@ -38,6 +38,8 @@ type Event = {
   priority?: 'low' | 'medium' | 'high' | 'urgent'
   status?: 'todo' | 'doing' | 'done'
   task_id?: number
+  isOverdue?: boolean
+  isToday?: boolean
 }
 
 type Task = {
@@ -75,7 +77,11 @@ export default function PlanningPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [view, setView] = useState<'day' | 'week' | 'month'>('week')
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [showEditTaskForm, setShowEditTaskForm] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [newEvent, setNewEvent] = useState({
     title: '',
     description: '',
@@ -95,69 +101,139 @@ export default function PlanningPage() {
   }
 
   const loadEvents = async () => {
-    let startDate, endDate
+    setLoading(true)
+    setError(null)
+    
+    try {
+      let startDate, endDate
 
-    if (view === 'day') {
-      startDate = new Date(currentDate)
-      endDate = new Date(currentDate)
-    } else if (view === 'week') {
-      startDate = new Date(currentDate)
-      startDate.setDate(currentDate.getDate() - currentDate.getDay() + 1)
-      endDate = new Date(startDate)
-      endDate.setDate(startDate.getDate() + 6)
-    } else { // month
-      startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
-      endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
-    }
+      if (view === 'day') {
+        startDate = new Date(currentDate)
+        endDate = new Date(currentDate)
+      } else if (view === 'week') {
+        startDate = new Date(currentDate)
+        startDate.setDate(currentDate.getDate() - currentDate.getDay() + 1)
+        endDate = new Date(startDate)
+        endDate.setDate(startDate.getDate() + 6)
+      } else { // month
+        startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+        endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
+      }
 
-    const params = new URLSearchParams({
-      start_date: startDate.toISOString().split('T')[0],
-      end_date: endDate.toISOString().split('T')[0]
-    })
-
-    // Charger les événements
-    const eventsRes = await fetch(`${api}/api/events/?${params}`, { headers: headers() })
-    if (eventsRes.ok) {
-      const eventsData = await eventsRes.json()
-      setEvents(eventsData)
-    }
-
-    // Charger les tâches avec deadlines dans la période
-    const tasksRes = await fetch(`${api}/api/tasks/`, { headers: headers() })
-    if (tasksRes.ok) {
-      const tasksData = await tasksRes.json()
-      // Filtrer les tâches qui ont une deadline dans la période affichée
-      const tasksWithDeadlines = tasksData.filter((task: Task) => {
-        if (!task.due_date) return false
-        const dueDate = new Date(task.due_date)
-        return dueDate >= startDate && dueDate <= endDate
+      const params = new URLSearchParams({
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0]
       })
-      setTasks(tasksWithDeadlines)
+
+      // Charger les événements
+      const eventsRes = await fetch(`${api}/api/events/?${params}`, { headers: headers() })
+      if (eventsRes.ok) {
+        const eventsData = await eventsRes.json()
+        setEvents(eventsData)
+      } else {
+        throw new Error('Erreur lors du chargement des événements')
+      }
+
+      // Charger les tâches avec deadlines dans la période
+      const tasksRes = await fetch(`${api}/api/tasks/`, { headers: headers() })
+      if (tasksRes.ok) {
+        const tasksData = await tasksRes.json()
+        // Filtrer les tâches qui ont une deadline dans la période affichée
+        const tasksWithDeadlines = tasksData.filter((task: Task) => {
+          if (!task.due_date) return false
+          const dueDate = new Date(task.due_date)
+          return dueDate >= startDate && dueDate <= endDate
+        })
+        setTasks(tasksWithDeadlines)
+      } else {
+        throw new Error('Erreur lors du chargement des tâches')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur de chargement')
+    } finally {
+      setLoading(false)
     }
   }
 
   useEffect(() => { loadEvents() }, [currentDate, view])
 
-  const createEvent = async () => {
-    const res = await fetch(`${api}/api/events/`, {
-      method: 'POST',
-      headers: headers(),
-      body: JSON.stringify(newEvent)
-    })
-    if (res.ok) {
-      setNewEvent({
-        title: '',
-        description: '',
-        event_type: 'work',
-        start_datetime: '',
-        end_datetime: '',
-        all_day: false,
-        location: '',
-        color: '#3B82F6'
-      })
-      setShowCreateForm(false)
-      loadEvents()
+  // Raccourcis clavier
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowCreateForm(false)
+        setShowEditTaskForm(false)
+        setSelectedEvent(null)
+        setError(null)
+      }
+      if (e.key === 'n' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault()
+        setShowCreateForm(true)
+      }
     }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
+  }, [])
+
+  const createEvent = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch(`${api}/api/events/`, {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify(newEvent)
+      })
+      if (res.ok) {
+        setNewEvent({
+          title: '',
+          description: '',
+          event_type: 'work',
+          start_datetime: '',
+          end_datetime: '',
+          all_day: false,
+          location: '',
+          color: '#3B82F6'
+        })
+        setShowCreateForm(false)
+        loadEvents()
+      } else {
+        throw new Error('Erreur lors de la création de l\'événement')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur de création')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const updateTask = async (taskData: Partial<Task>) => {
+    if (!editingTask) return
+    
+    setLoading(true)
+    try {
+      const res = await fetch(`${api}/api/tasks/${editingTask.id}/`, {
+        method: 'PATCH',
+        headers: headers(),
+        body: JSON.stringify(taskData)
+      })
+      if (res.ok) {
+        setShowEditTaskForm(false)
+        setEditingTask(null)
+        loadEvents()
+      } else {
+        throw new Error('Erreur lors de la mise à jour de la tâche')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur de mise à jour')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const openTaskEditor = (task: Task) => {
+    setEditingTask(task)
+    setShowEditTaskForm(true)
   }
 
   const deleteEvent = async (id: number) => {
@@ -201,23 +277,31 @@ export default function PlanningPage() {
     const dayEvents = events.filter(e => e.start_datetime.startsWith(dateStr))
     
     // Ajouter les deadlines des tâches pour ce jour
-    const dayTasks = tasks.filter(task => task.due_date === dateStr).map(task => ({
-      id: `task-${task.id}`,
-      title: `📋 ${task.title}`,
-      description: task.description || `Échéance de la tâche: ${task.title}`,
-      event_type: 'deadline',
-      start_datetime: `${dateStr}T23:59:00`,
-      end_datetime: `${dateStr}T23:59:00`,
-      all_day: true,
-      location: task.project_name || '',
-      color: priorityColors[task.priority],
-      project_name: task.project_name,
-      task_title: task.title,
-      duration_minutes: 0,
-      priority: task.priority,
-      status: task.status,
-      task_id: task.id
-    }))
+    const today = new Date().toISOString().split('T')[0]
+    const dayTasks = tasks.filter(task => task.due_date === dateStr).map(task => {
+      const isOverdue = dateStr < today && task.status !== 'done'
+      const isToday = dateStr === today
+      
+      return {
+        id: `task-${task.id}`,
+        title: `${isOverdue ? '⚠️' : isToday ? '🎯' : '📋'} ${task.title}`,
+        description: task.description || `Échéance de la tâche: ${task.title}`,
+        event_type: 'deadline',
+        start_datetime: `${dateStr}T23:59:00`,
+        end_datetime: `${dateStr}T23:59:00`,
+        all_day: true,
+        location: task.project_name || '',
+        color: isOverdue ? '#DC2626' : priorityColors[task.priority],
+        project_name: task.project_name,
+        task_title: task.title,
+        duration_minutes: 0,
+        priority: task.priority,
+        status: task.status,
+        task_id: task.id,
+        isOverdue,
+        isToday
+      }
+    })
     
     return [...dayEvents, ...dayTasks]
   }
@@ -259,6 +343,25 @@ export default function PlanningPage() {
 
   return (
     <div className="space-y-8">
+      {/* Messages d'erreur */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-red-500/10 border border-red-500/20 rounded-lg p-4"
+        >
+          <p className="text-red-400 text-sm">{error}</p>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setError(null)}
+            className="mt-2 text-red-400 hover:text-red-300"
+          >
+            Fermer
+          </Button>
+        </motion.div>
+      )}
+
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -266,7 +369,7 @@ export default function PlanningPage() {
       >
         <div>
           <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-accent to-blue-400 bg-clip-text text-transparent">
-            Planning
+            Planning {loading && <span className="text-sm text-neutral-500">⏳</span>}
           </h1>
           <p className="text-neutral-400 mt-2 text-sm sm:text-base">Gérez votre emploi du temps et vos événements</p>
         </div>
@@ -310,12 +413,22 @@ export default function PlanningPage() {
       >
         <Card className="p-6">
           <div className="flex items-center justify-between">
-            <Button variant="ghost" onClick={() => navigate('prev')} className="gap-2">
-              <ChevronLeft className="w-4 h-4" />
-              Précédent
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" onClick={() => navigate('prev')} className="gap-2">
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Précédent</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setCurrentDate(new Date())}
+                className="text-xs"
+              >
+                Aujourd'hui
+              </Button>
+            </div>
             
-            <h2 className="text-xl font-semibold">
+            <h2 className="text-lg sm:text-xl font-semibold text-center">
               {view === 'week' 
                 ? `Semaine du ${weekDays[0].toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
                 : view === 'day'
@@ -325,7 +438,7 @@ export default function PlanningPage() {
             </h2>
             
             <Button variant="ghost" onClick={() => navigate('next')} className="gap-2">
-              Suivant
+              <span className="hidden sm:inline">Suivant</span>
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
@@ -366,14 +479,23 @@ export default function PlanningPage() {
                             key={event.id}
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: j * 0.05 }}
-                            onClick={() => setSelectedEvent(event)}
-                            className="group cursor-pointer mb-2"
+                          transition={{ delay: j * 0.05 }}
+                          onClick={() => setSelectedEvent(event)}
+                          onDoubleClick={() => {
+                            if (event.event_type === 'deadline' && event.task_id) {
+                              const task = tasks.find(t => t.id === event.task_id)
+                              if (task) {
+                                openTaskEditor(task)
+                              }
+                            }
+                          }}
+                          className="group cursor-pointer mb-2"
+                          title={event.event_type === 'deadline' ? 'Double-clic pour modifier la tâche' : ''}
+                        >
+                          <div 
+                            className="p-3 rounded-lg border border-neutral-900/60 hover:border-accent/50 transition-all"
+                            style={{ backgroundColor: `${event.color}15`, borderColor: `${event.color}40` }}
                           >
-                            <div 
-                              className="p-3 rounded-lg border border-neutral-900/60 hover:border-accent/50 transition-all"
-                              style={{ backgroundColor: `${event.color}15`, borderColor: `${event.color}40` }}
-                            >
                             <div className="flex items-center gap-2 mb-1">
                               <EventIcon className="w-4 h-4" style={{ color: event.color }} />
                               <span className="font-medium group-hover:text-accent transition-colors">
@@ -920,13 +1042,27 @@ export default function PlanningPage() {
                     <div className="flex gap-2">
                       <Button 
                         size="sm" 
+                        variant="primary"
+                        onClick={() => {
+                          const task = tasks.find(t => t.id === selectedEvent.task_id)
+                          if (task) {
+                            openTaskEditor(task)
+                            setSelectedEvent(null)
+                          }
+                        }}
+                      >
+                        <Edit3 className="w-4 h-4 mr-1" />
+                        Modifier
+                      </Button>
+                      <Button 
+                        size="sm" 
                         variant="ghost"
                         onClick={() => {
                           // Rediriger vers la page des tâches
                           window.location.href = `/tasks?task=${selectedEvent.task_id}`
                         }}
                       >
-                        Voir la tâche
+                        Voir détails
                       </Button>
                     </div>
                   </div>
@@ -935,6 +1071,107 @@ export default function PlanningPage() {
               
               <div className="flex gap-2 mt-6">
                 <Button onClick={() => setSelectedEvent(null)}>Fermer</Button>
+              </div>
+            </Card>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Edit Task Form */}
+      {showEditTaskForm && editingTask && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowEditTaskForm(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            onClick={e => e.stopPropagation()}
+            className="w-full max-w-md max-h-[90vh] overflow-y-auto"
+          >
+            <Card className="p-6">
+              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <Edit3 className="w-5 h-5" />
+                Modifier la tâche
+              </h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Titre</label>
+                  <Input
+                    value={editingTask.title}
+                    onChange={e => setEditingTask({...editingTask, title: e.target.value})}
+                    placeholder="Titre de la tâche"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">Description</label>
+                  <textarea
+                    value={editingTask.description || ''}
+                    onChange={e => setEditingTask({...editingTask, description: e.target.value})}
+                    placeholder="Description (optionnel)"
+                    className="w-full p-3 bg-background border border-neutral-900 rounded-lg resize-none h-20"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Priorité</label>
+                    <Select
+                      value={editingTask.priority}
+                      onChange={e => setEditingTask({...editingTask, priority: e.target.value as Task['priority']})}
+                    >
+                      <option value="low">Basse</option>
+                      <option value="medium">Moyenne</option>
+                      <option value="high">Haute</option>
+                      <option value="urgent">Urgente</option>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Statut</label>
+                    <Select
+                      value={editingTask.status}
+                      onChange={e => setEditingTask({...editingTask, status: e.target.value as Task['status']})}
+                    >
+                      <option value="todo">À faire</option>
+                      <option value="doing">En cours</option>
+                      <option value="done">Terminé</option>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Date d'échéance</label>
+                  <Input
+                    type="date"
+                    value={editingTask.due_date || ''}
+                    onChange={e => setEditingTask({...editingTask, due_date: e.target.value})}
+                  />
+                </div>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-2 mt-6">
+                <Button 
+                  onClick={() => updateTask(editingTask)} 
+                  className="flex-1"
+                  disabled={loading}
+                >
+                  {loading ? 'Mise à jour...' : 'Mettre à jour'}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => {
+                    setShowEditTaskForm(false)
+                    setEditingTask(null)
+                  }} 
+                  className="flex-1"
+                  disabled={loading}
+                >
+                  Annuler
+                </Button>
               </div>
             </Card>
           </motion.div>
