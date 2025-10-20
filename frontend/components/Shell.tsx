@@ -14,6 +14,12 @@ const tabs = [
 
 export default function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  
+  // Ne pas afficher la navigation sur la page de login
+  if (pathname === '/login') {
+    return <>{children}</>
+  }
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1a1b3a] via-[#2d1b69] to-[#1a1b3a] text-white flex">
       <motion.aside 
