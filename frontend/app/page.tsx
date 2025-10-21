@@ -13,14 +13,21 @@ export default function Home() {
   useEffect(() => {
     if (!mounted) return
 
-    // Vérifier si l'utilisateur est connecté
-    const token = localStorage.getItem('access')
-    if (token) {
-      // Si connecté, rediriger vers le dashboard
+    // En mode Electron, aller directement au dashboard
+    if (typeof window !== 'undefined' && window.location.href.includes('localhost:3000')) {
+      // Simuler un token pour éviter la boucle
+      localStorage.setItem('access', 'electron-token')
       router.replace('/dashboard')
     } else {
-      // Si pas connecté, rediriger vers le login
-      router.replace('/login')
+      // Vérifier si l'utilisateur est connecté
+      const token = localStorage.getItem('access')
+      if (token) {
+        // Si connecté, rediriger vers le dashboard
+        router.replace('/dashboard')
+      } else {
+        // Si pas connecté, rediriger vers le login
+        router.replace('/login')
+      }
     }
   }, [router, mounted])
 

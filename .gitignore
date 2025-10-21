@@ -25,6 +25,9 @@ yarn-error.log*
 .next/
 out/
 
+# Electron builds
+frontend/dist/
+
 # Environment variables
 .env
 .env.local

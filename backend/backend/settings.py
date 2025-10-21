@@ -67,13 +67,27 @@ if os.getenv('USE_POSTGRESQL', '0') == '1':
 		}
 	}
 else:
-	# Configuration SQLite par défaut (idéale pour le déploiement)
-	DATABASES = {
-		'default': {
-			'ENGINE': 'django.db.backends.sqlite3',
-			'NAME': BASE_DIR / 'db.sqlite3',
+	# Configuration base de données partagée
+	if os.getenv('USE_POSTGRESQL') == '1':
+		# PostgreSQL pour production (partagé)
+		DATABASES = {
+			'default': {
+				'ENGINE': 'django.db.backends.postgresql',
+				'NAME': os.getenv('POSTGRES_DB', 'orgwork'),
+				'USER': os.getenv('POSTGRES_USER', 'orgwork'),
+				'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'orgwork'),
+				'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
+				'PORT': os.getenv('POSTGRES_PORT', '5432'),
+			}
 		}
-	}
+	else:
+		# SQLite pour développement local
+		DATABASES = {
+			'default': {
+				'ENGINE': 'django.db.backends.sqlite3',
+				'NAME': BASE_DIR / 'db.sqlite3',
+			}
+		}
 
 AUTH_USER_MODEL = 'users.User'
 
