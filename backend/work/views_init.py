@@ -12,8 +12,9 @@ def initialize_production_data(request):
     """Endpoint pour initialiser les données de production"""
     
     try:
-        # Vérifier si des données existent déjà
-        if User.objects.filter(personal_identifier__in=["admin", "romain"]).exists():
+        # Vérifier si des données complètes existent déjà
+        if (User.objects.filter(personal_identifier__in=["admin", "romain"]).exists() and 
+            Project.objects.count() > 0 and Task.objects.count() > 0):
             return JsonResponse({
                 'status': 'info',
                 'message': 'Les données existent déjà',
@@ -22,35 +23,47 @@ def initialize_production_data(request):
                 'tasks': Task.objects.count()
             })
 
-        # Créer les utilisateurs de démonstration
-        admin_user = User.objects.create_user(
+        # Créer les utilisateurs de démonstration (ou les récupérer s'ils existent)
+        admin_user, created = User.objects.get_or_create(
             personal_identifier="admin",
-            email="admin@orgwork.com",
-            password="admin123",
-            first_name="Admin",
-            last_name="System",
-            is_staff=True,
-            is_superuser=True
+            defaults={
+                "email": "admin@orgwork.com",
+                "first_name": "Admin",
+                "last_name": "System",
+                "is_staff": True,
+                "is_superuser": True
+            }
         )
+        if created:
+            admin_user.set_password("admin123")
+            admin_user.save()
         
-        romain = User.objects.create_user(
+        romain, created = User.objects.get_or_create(
             personal_identifier="romain",
-            email="romain@orgwork.com", 
-            password="password",
-            first_name="Romain",
-            last_name="Regnier",
-            is_staff=True,
-            is_superuser=True
+            defaults={
+                "email": "romain@orgwork.com",
+                "first_name": "Romain",
+                "last_name": "Regnier",
+                "is_staff": True,
+                "is_superuser": True
+            }
         )
+        if created:
+            romain.set_password("password")
+            romain.save()
         
-        thibaud = User.objects.create_user(
+        thibaud, created = User.objects.get_or_create(
             personal_identifier="thibaud",
-            email="thibaud@orgwork.com",
-            password="password", 
-            first_name="Thibaud",
-            last_name="Martin",
-            is_staff=True
+            defaults={
+                "email": "thibaud@orgwork.com",
+                "first_name": "Thibaud",
+                "last_name": "Martin",
+                "is_staff": True
+            }
         )
+        if created:
+            thibaud.set_password("password")
+            thibaud.save()
 
         # Créer les projets de démonstration
         project1 = Project.objects.create(
