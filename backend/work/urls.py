@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import ProjectViewSet, TaskViewSet, DocViewSet, TimeEntryViewSet, ClientViewViewSet, CommentViewSet, AttachmentViewSet, SubTaskViewSet, EventViewSet, ScheduleViewSet, TimerViewSet
 from .views_init import initialize_production_data
+from .views_simple_init import simple_init
 
 router = DefaultRouter()
 router.register(r'projects', ProjectViewSet)
@@ -19,4 +20,5 @@ router.register(r'schedules', ScheduleViewSet)
 urlpatterns = [
     path('', include(router.urls)),
     path('init-production/', initialize_production_data, name='init_production'),
+    path('init-simple/', simple_init, name='simple_init'),
 ]
