@@ -121,6 +121,7 @@ const nextConfig = {
     unoptimized: true
   },
   env: {
+    // URL du backend Render (corrigée)
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://oragnisation-du-travail.onrender.com',
   },
 }
