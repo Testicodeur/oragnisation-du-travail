@@ -97,12 +97,42 @@ export default function PlanningPage() {
 
   const headers = () => {
     const access = localStorage.getItem("access")
+    if (!access) return null
     return { Authorization: `Bearer ${access}`, "Content-Type": "application/json" }
+  }
+
+  const refreshToken = async () => {
+    const refresh = localStorage.getItem("refresh")
+    if (!refresh) return false
+    
+    try {
+      const res = await fetch(api + "/api/auth/token/refresh/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh })
+      })
+      
+      if (res.ok) {
+        const data = await res.json()
+        localStorage.setItem("access", data.access)
+        return true
+      }
+    } catch (e) {
+      console.error("Refresh token failed:", e)
+    }
+    
+    // Si le refresh échoue, rediriger vers login
+    localStorage.clear()
+    window.location.href = "/login"
+    return false
   }
 
   const loadEvents = async () => {
     setLoading(true)
     setError(null)
+    
+    let authHeaders = headers()
+    if (!authHeaders) { window.location.href = "/login"; return }
     
     try {
       let startDate, endDate
@@ -126,16 +156,38 @@ export default function PlanningPage() {
       })
 
       // Charger les événements
-      const eventsRes = await fetch(`${api}/api/events/?${params}`, { headers: headers() })
+      let eventsRes = await fetch(`${api}/api/events/?${params}`, { headers: authHeaders })
+      
+      // Si 401, essayer de rafraîchir le token
+      if (eventsRes.status === 401) {
+        console.log('Token expired, trying to refresh...')
+        const refreshed = await refreshToken()
+        if (refreshed) {
+          authHeaders = headers()
+          eventsRes = await fetch(`${api}/api/events/?${params}`, { headers: authHeaders })
+        }
+      }
+      
       if (eventsRes.ok) {
         const eventsData = await eventsRes.json()
         setEvents(eventsData)
       } else {
-        throw new Error('Erreur lors du chargement des événements')
+        throw new Error(`Erreur lors du chargement des événements: ${eventsRes.status}`)
       }
 
       // Charger les tâches avec deadlines dans la période
-      const tasksRes = await fetch(`${api}/api/tasks/`, { headers: headers() })
+      let tasksRes = await fetch(`${api}/api/tasks/`, { headers: authHeaders })
+      
+      // Si 401, essayer de rafraîchir le token
+      if (tasksRes.status === 401) {
+        console.log('Token expired for tasks, trying to refresh...')
+        const refreshed = await refreshToken()
+        if (refreshed) {
+          authHeaders = headers()
+          tasksRes = await fetch(`${api}/api/tasks/`, { headers: authHeaders })
+        }
+      }
+      
       if (tasksRes.ok) {
         const tasksData = await tasksRes.json()
         // Filtrer les tâches qui ont une deadline dans la période affichée
@@ -146,7 +198,7 @@ export default function PlanningPage() {
         })
         setTasks(tasksWithDeadlines)
       } else {
-        throw new Error('Erreur lors du chargement des tâches')
+        throw new Error(`Erreur lors du chargement des tâches: ${tasksRes.status}`)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de chargement')

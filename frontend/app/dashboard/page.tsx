@@ -33,19 +33,69 @@ export default function DashboardPage() {
     return { Authorization: `Bearer ${access}`, "Content-Type": "application/json" }
   }
 
+  const refreshToken = async () => {
+    const refresh = localStorage.getItem("refresh")
+    if (!refresh) return false
+    
+    try {
+      const res = await fetch(apiUrl + "/api/auth/token/refresh/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh })
+      })
+      
+      if (res.ok) {
+        const data = await res.json()
+        localStorage.setItem("access", data.access)
+        return true
+      }
+    } catch (e) {
+      console.error("Refresh token failed:", e)
+    }
+    
+    // Si le refresh échoue, rediriger vers login
+    localStorage.clear()
+    window.location.href = "/login"
+    return false
+  }
+
   const loadData = async () => {
     setError(null)
-    const headers = getHeaders(); if (!headers) { window.location.href = "/login"; return }
+    let headers = getHeaders()
+    if (!headers) { window.location.href = "/login"; return }
+    
     try {
-      const [pr, tr] = await Promise.all([
-        fetch(apiUrl + "/api/projects/", { headers }),
-        fetch(apiUrl + "/api/tasks/", { headers }),
-      ])
-      if (!pr.ok || !tr.ok) throw new Error("Erreur de chargement")
+      console.log('Loading data with headers:', headers)
+      
+      // Faire les requêtes une par une pour déboguer
+      let pr = await fetch(apiUrl + "/api/projects/", { headers })
+      console.log('Projects response:', pr.status, pr.statusText)
+      
+      // Si 401, essayer de rafraîchir le token
+      if (pr.status === 401) {
+        console.log('Token expired, trying to refresh...')
+        const refreshed = await refreshToken()
+        if (refreshed) {
+          headers = getHeaders()
+          pr = await fetch(apiUrl + "/api/projects/", { headers })
+          console.log('Projects response after refresh:', pr.status, pr.statusText)
+        }
+      }
+      
+      if (!pr.ok) throw new Error(`Erreur projets: ${pr.status}`)
+      
+      const tr = await fetch(apiUrl + "/api/tasks/", { headers })
+      console.log('Tasks response:', tr.status, tr.statusText)
+      if (!tr.ok) throw new Error(`Erreur tâches: ${tr.status}`)
+      
       const [p, t] = await Promise.all([pr.json(), tr.json()])
+      console.log('Data loaded:', { projects: p.length, tasks: t.length })
       setProjects(p)
       setTasks(t)
-    } catch (e: any) { setError(e.message) }
+    } catch (e: any) { 
+      console.error('Load error:', e)
+      setError(e.message) 
+    }
   }
   useEffect(() => { loadData() }, [])
 
