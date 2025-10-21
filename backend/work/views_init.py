@@ -13,11 +13,13 @@ def initialize_production_data(request):
     
     try:
         # Vérifier si des données complètes existent déjà
-        if (User.objects.filter(personal_identifier__in=["admin", "romain"]).exists() and 
+        force = request.GET.get('force', 'false').lower() == 'true'
+        
+        if not force and (User.objects.filter(personal_identifier__in=["admin", "romain"]).exists() and 
             Project.objects.count() > 0 and Task.objects.count() > 0):
             return JsonResponse({
                 'status': 'info',
-                'message': 'Les données existent déjà',
+                'message': 'Les données existent déjà (utilisez ?force=true pour forcer)',
                 'users': User.objects.count(),
                 'projects': Project.objects.count(),
                 'tasks': Task.objects.count()
